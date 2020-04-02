@@ -12,7 +12,7 @@ from frappe import _
 from frappe.utils import cint
 from frappe.model.document import Document
 from frappe.model import no_value_fields, core_doctypes_list
-from frappe.core.doctype.doctype.doctype import validate_fields_for_doctype
+from frappe.core.doctype.doctype.doctype import validate_fields_for_doctype, check_email_append_to
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.model.docfield import supports_translation
 
@@ -31,7 +31,10 @@ doctype_properties = {
 	'track_changes': 'Check',
 	'track_views': 'Check',
 	'allow_auto_repeat': 'Check',
-	'allow_import': 'Check'
+	'allow_import': 'Check',
+	'email_append_to': 'Check',
+	'subject_field': 'Data',
+	'sender_field': 'Data'
 }
 
 docfield_properties = {
@@ -170,6 +173,7 @@ class CustomizeForm(Document):
 		self.update_custom_fields()
 		self.set_name_translation()
 		validate_fields_for_doctype(self.doc_type)
+		check_email_append_to(self)
 
 		if self.flags.update_db:
 			frappe.db.updatedb(self.doc_type)
@@ -384,10 +388,10 @@ class CustomizeForm(Document):
 				FROM `tab{doctype}`
 				WHERE LENGTH({fieldname}) > {max_length}
 			'''.format(
-				fieldname = fieldname,
-				doctype = self.doc_type,
-				max_length = max_length
-			), as_dict = True)
+				fieldname=fieldname,
+				doctype=self.doc_type,
+				max_length=max_length
+			), as_dict=True)
 			links = []
 			label = df.label
 			for doc in docs:
@@ -396,7 +400,11 @@ class CustomizeForm(Document):
 
 			if docs:
 				frappe.throw(_('Value for field {0} is too long in {1}. Length should be lesser than {2} characters')
-					.format(frappe.bold(label), links_str, frappe.bold(max_length)), title=_('Data Too Long'), is_minimizable=len(docs) > 1)
+					.format(
+						frappe.bold(label),
+						links_str,
+						frappe.bold(max_length)
+					), title=_('Data Too Long'), is_minimizable=len(docs) > 1)
 
 		self.flags.update_db = True
 
